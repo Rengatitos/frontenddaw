@@ -88,7 +88,7 @@
 import { useQuasar } from 'quasar'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import { useAuthStore } from 'src/stores/auth'
 
 export default {
   name: 'LoginPage',
@@ -102,90 +102,29 @@ export default {
     const loading = ref(false)
     const showPassword = ref(false)
 
+    const auth = useAuthStore()
+
     const handleLogin = async () => {
       loading.value = true
-
       try {
-        console.log('📡 PASO 1: Login...')
-        // 1. LOGIN (Para validar contraseña y obtener Token)
-        const loginRes = await axios.post('https://backend-daw.onrender.com/api/Usuario/login', {
-          correo: email.value,
-          password: password.value,
-        })
-
-        const token = loginRes.data.token
-        localStorage.setItem('token', token) // Guardamos token
-
-        console.log('📡 PASO 2: Obteniendo LISTA COMPLETA de usuarios...')
-
-        // 2. GET DE LA LISTA COMPLETA (Esto evita el error 404 de ID específico)
-        const listRes = await axios.get('https://backend-daw.onrender.com/api/Usuario')
-
-        // La lista suele venir directa en data o en data.users
-        const allUsers = Array.isArray(listRes.data) ? listRes.data : listRes.data.users || []
-
-        // 3. BUSCAMOS TU USUARIO EN ESA LISTA (Por correo)
-        // Usamos toLowerCase() para evitar problemas de mayúsculas
-        const myUser = allUsers.find((u) => u.correo.toLowerCase() === email.value.toLowerCase())
-
-        if (!myUser) {
-          throw new Error('Usuario logueado pero no encontrado en la lista general.')
+        const payload = { email: email.value, correo: email.value, password: password.value }
+        const res = await auth.login(payload)
+        if (!res.ok) {
+          $q.notify({ type: 'negative', message: 'Credenciales incorrectas' })
+          return
         }
 
-        console.log('📦 USUARIO ENCONTRADO (CRUDO):', myUser)
+        $q.notify({ type: 'positive', message: `Bienvenido ${auth.user?.name || auth.user?.email || ''}` })
 
-        // Guardamos el usuario completo
-        localStorage.setItem('user', JSON.stringify(myUser))
-
-        $q.notify({
-          type: 'positive',
-          message: `Bienvenido ${myUser.nombre || ''}`,
-        })
-
-        // 4. VALIDACIÓN DE ROL (Ahora sí tenemos el objeto real)
-        let idRef = ''
-
-        // Intentamos obtener el ID del rol
-        if (myUser.rol_ref) {
-          idRef = typeof myUser.rol_ref === 'object' ? myUser.rol_ref._id : myUser.rol_ref
-        } else if (myUser.rolRef) {
-          idRef = typeof myUser.rolRef === 'object' ? myUser.rolRef._id : myUser.rolRef
-        }
-
-        idRef = String(idRef || '')
-          .toLowerCase()
-          .trim()
-        console.log('🔍 ID FINAL PARA VALIDAR:', idRef)
-
-        if (idRef.endsWith('5d')) {
-          console.log('✅ ADMIN (5d)')
-          router.push('/admin-dashboard')
-        } else if (idRef.endsWith('5c')) {
-          console.log('✅ COLABORADOR (5c)')
-          router.push('/dashboard')
+        // redirect based on role (expecting exact 'Administrador')
+        if (auth.role === 'Administrador') {
+          router.push('/admin/dashboard')
         } else {
-          console.warn('⚠️ ID no reconocido, enviando a dashboard')
           router.push('/dashboard')
         }
       } catch (error) {
         console.error(error)
-        let mensaje = 'Error de conexión'
-
-        if (error.response) {
-          // Si el login falla
-          if (error.config.url.includes('login')) {
-            mensaje = error.response.data.message || 'Credenciales incorrectas'
-          } else {
-            // Si falla la lista de usuarios
-            console.warn('Falló la lista de usuarios, entrando en modo seguro')
-            router.push('/dashboard')
-            return
-          }
-        }
-        $q.notify({
-          type: 'negative',
-          message: mensaje,
-        })
+        $q.notify({ type: 'negative', message: 'Error al autenticar' })
       } finally {
         loading.value = false
       }
