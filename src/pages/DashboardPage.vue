@@ -144,6 +144,7 @@
             class="q-px-lg q-py-md text-weight-bold"
             no-caps
             style="border-radius: 8px"
+            to="/chatbot"
           />
         </div>
       </div>

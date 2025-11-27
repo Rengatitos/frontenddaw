@@ -14,6 +14,12 @@ const routes = [
     component: () => import('src/pages/DashboardPage.vue'),
   },
 
+  // ChatBot page for onboarding assistant
+  {
+    path: '/chatbot',
+    component: () => import('src/pages/ChatBot.vue'),
+  },
+
   {
     path: '/forgot-password',
     component: () => import('src/pages/ForgotPasswordPage.vue'),
