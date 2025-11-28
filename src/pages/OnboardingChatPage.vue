@@ -65,45 +65,70 @@
 import NavBar from 'src/components/NavBar.vue'
 import ChatBubble from 'src/components/ChatBubble.vue'
 import ChatInput from 'src/components/ChatInput.vue'
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
 
-const cards = ref([
-  {
-    title: 'Intranet TCS',
-    description: 'Portal corporativo con acceso a recursos, noticias y herramientas de la empresa.',
-    url: 'https://intranet.tcs.com',
-    icon: 'public',
-  },
-  {
-    title: 'Políticas Internas',
-    description: 'Documentación oficial sobre políticas, procedimientos y normativas de TCS.',
-    url: 'https://docs.tcs.com/politicas',
-    icon: 'description',
-  },
-  {
-    title: 'Formularios de RRHH',
-    description: 'Acceso a formularios y documentos necesarios para Recursos Humanos.',
-    url: 'https://rrhh.tcs.com/formularios',
-    icon: 'article',
-  },
-  {
-    title: 'Manual del Empleado',
-    description: 'Guía completa para nuevos empleados con información esencial.',
-    url: 'https://docs.tcs.com/manual-empleado',
-    icon: 'menu_book',
-  },
-  {
-    title: 'Portal de Capacitación',
-    description: 'Plataforma de cursos y programas de formación continua.',
-    url: 'https://learning.tcs.com',
-    icon: 'school',
-  },
-])
+const cards = ref([])
+
+const loadLinks = async () => {
+  try {
+    const token = localStorage.getItem('token')
+    const response = await axios.get('https://backend-daw.onrender.com/api/Enlace', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    const data = Array.isArray(response.data) ? response.data : response.data.data || []
+    cards.value = data.map((link) => ({
+      title: link.nombre || link.title || 'Sin título',
+      description: link.descripcion || link.description || '',
+      url: link.url || link.enlace || '#',
+      icon: link.icono || link.icon || 'link',
+    }))
+  } catch (error) {
+    console.warn('Error cargando enlaces:', error)
+    cards.value = [
+      {
+        title: 'Intranet TCS',
+        description:
+          'Portal corporativo con acceso a recursos, noticias y herramientas de la empresa.',
+        url: 'https://intranet.tcs.com',
+        icon: 'public',
+      },
+      {
+        title: 'Políticas Internas',
+        description: 'Documentación oficial sobre políticas, procedimientos y normativas de TCS.',
+        url: 'https://docs.tcs.com/politicas',
+        icon: 'description',
+      },
+      {
+        title: 'Formularios de RRHH',
+        description: 'Acceso a formularios y documentos necesarios para Recursos Humanos.',
+        url: 'https://rrhh.tcs.com/formularios',
+        icon: 'article',
+      },
+      {
+        title: 'Manual del Empleado',
+        description: 'Guía completa para nuevos empleados con información esencial.',
+        url: 'https://docs.tcs.com/manual-empleado',
+        icon: 'menu_book',
+      },
+      {
+        title: 'Portal de Capacitación',
+        description: 'Plataforma de cursos y programas de formación continua.',
+        url: 'https://learning.tcs.com',
+        icon: 'school',
+      },
+    ]
+  }
+}
 
 function onSend(text) {
-  // Por ahora sólo añadimos un mensaje de usuario simple en consola
   console.log('Usuario envió:', text)
 }
+
+onMounted(() => {
+  loadLinks()
+})
 </script>
 
 <style scoped>
