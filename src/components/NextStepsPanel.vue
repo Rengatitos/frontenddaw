@@ -62,7 +62,7 @@
 import { computed, ref } from 'vue'
 import { useQuasar } from 'quasar'
 
-const $q = useQuasar()
+const $q= useQuasar()
 
 // sample tasks (same as previous)
 const tasks = ref([

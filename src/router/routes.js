@@ -20,6 +20,12 @@ const routes = [
     ],
   },
 
+  // ChatBot page for onboarding assistant
+  {
+    path: '/chatbot',
+    component: () => import('src/pages/ChatBot.vue'),
+  },
+
   {
     path: '/admindashboard',
     component: () => import('src/layouts/MainLayout.vue'),

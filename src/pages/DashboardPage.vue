@@ -121,6 +121,41 @@
       </div>
     </div>
 
+    <div class="q-mt-xl q-mb-lg" style="max-width: 1200px; margin: 0 auto">
+      <div
+        class="bg-indigo-1 q-pa-lg row items-center shadow-1"
+        style="border-radius: 16px; border: 1px solid #c7caff"
+      >
+        <div class="col-12 col-md-auto q-mr-md flex flex-center q-mb-md q-mb-md-none">
+          <div class="bg-white q-pa-md shadow-2" style="border-radius: 12px">
+            <q-icon name="smart_toy" color="indigo-8" size="40px" />
+          </div>
+        </div>
+
+        <div class="col-12 col-md">
+          <div class="text-h6 text-weight-bold text-indigo-9">¿Tienes preguntas?</div>
+          <div class="text-body2 text-grey-8 q-mt-xs" style="max-width: 600px">
+            Nuestro asistente virtual está disponible 24/7 para ayudarte con cualquier duda sobre tu
+            proceso de incorporación, políticas de la empresa y beneficios.
+          </div>
+        </div>
+
+        <div class="col-12 col-md-auto q-mt-md q-mt-md-none">
+          <q-btn
+            unelevated
+            color="indigo-6"
+            text-color="white"
+            label="Hablar con el Asistente"
+            icon-right="arrow_forward"
+            class="q-px-lg q-py-md text-weight-bold"
+            no-caps
+            style="border-radius: 8px"
+            to="/chatbot"
+          />
+        </div>
+      </div>
+    </div>
+
     <footer class="text-center text-grey-5 q-py-lg text-caption">
       Si necesitas ayuda inmediata, contacta a tu supervisor o al equipo de Recursos Humanos
     </footer>
