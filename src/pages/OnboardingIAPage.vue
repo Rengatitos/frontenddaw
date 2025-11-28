@@ -81,71 +81,110 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import NavBar from 'src/components/NavBar.vue'
 import ChatBubble from 'src/components/ChatBubble.vue'
 import SuggestedQuestions from 'src/components/SuggestedQuestions.vue'
 import ChatInput from 'src/components/ChatInput.vue'
 import NextStepsPanel from 'src/components/NextStepsPanel.vue'
 import { useUIStore } from 'src/stores/ui'
+import axios from 'axios'
 
 const messages = ref([])
 const ui = useUIStore()
+const supervisor = ref(null)
+const links = ref([])
+
+const loadApiData = async () => {
+  try {
+    const token = localStorage.getItem('token')
+    const userStr = localStorage.getItem('user')
+
+    if (!token) return
+
+    const currentUser = JSON.parse(userStr || '{}')
+
+    // Cargar supervisor
+    if (currentUser.supervisorId) {
+      try {
+        const supervisorRes = await axios.get(
+          `https://backend-daw.onrender.com/api/Usuario/${currentUser.supervisorId}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        )
+        supervisor.value = supervisorRes.data
+      } catch {
+        console.warn('No se pudo cargar el supervisor')
+      }
+    }
+
+    // Cargar enlaces
+    try {
+      const linksRes = await axios.get('https://backend-daw.onrender.com/api/Enlace', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = Array.isArray(linksRes.data) ? linksRes.data : linksRes.data.data || []
+      links.value = data.map((link) => ({
+        title: link.nombre || link.title || 'Sin título',
+        description: link.descripcion || link.description || '',
+        url: link.url || link.enlace || '#',
+        icon: link.icono || link.icon || 'link',
+      }))
+    } catch {
+      console.warn('No se pudieron cargar los enlaces')
+    }
+  } catch (error) {
+    console.error('Error cargando datos:', error)
+  }
+}
 
 function addUserMessage(text) {
   messages.value.push({ text, user: true })
 
   const t = text.toLowerCase()
 
-  // Respuesta automática para preguntas sobre supervisora
+  // Respuesta sobre supervisor
   if (t.includes('supervisora') || t.includes('supervisor')) {
+    const supervisorName = supervisor.value?.nombre || 'Tu Supervisor'
+    const supervisorEmail = supervisor.value?.correo || supervisor.value?.email || ''
     messages.value.push({
-      text: 'Tu supervisora es María González Pérez. Puedes contactarla por correo electrónico o programar una reunión:',
+      text: `Tu supervisora es ${supervisorName}. Puedes contactarla por correo electrónico o programar una reunión:`,
       user: false,
       botType: 'supervisor',
+      supervisorEmail,
+      supervisorName,
     })
     return
   }
 
-  // Respuesta automática que devuelve una lista de enlaces (como en la captura)
-  if (t.includes('intranet') || t.includes('ver todo') || t.includes('ver')) {
-    messages.value.push({
-      user: false,
-      cards: [
-        {
-          title: 'Intranet TCS',
-          description:
-            'Portal corporativo con acceso a recursos, noticias y herramientas de la empresa.',
-          url: 'https://intranet.tcs.com',
-          icon: 'public',
-        },
-        {
-          title: 'Políticas Internas',
-          description: 'Documentación oficial sobre políticas, procedimientos y normativas de TCS.',
-          url: 'https://docs.tcs.com/politicas',
-          icon: 'description',
-        },
-        {
-          title: 'Formularios de RRHH',
-          description: 'Acceso a formularios y documentos necesarios para Recursos Humanos.',
-          url: 'https://rrhh.tcs.com/formularios',
-          icon: 'article',
-        },
-        {
-          title: 'Manual del Empleado',
-          description: 'Guía completa para nuevos empleados con información esencial.',
-          url: 'https://docs.tcs.com/manual-empleado',
-          icon: 'menu_book',
-        },
-        {
-          title: 'Portal de Capacitación',
-          description: 'Plataforma de cursos y programas de formación continua.',
-          url: 'https://learning.tcs.com',
-          icon: 'school',
-        },
-      ],
-    })
+  // Respuesta con enlaces
+  if (
+    t.includes('intranet') ||
+    t.includes('ver todo') ||
+    t.includes('ver') ||
+    t.includes('enlace')
+  ) {
+    if (links.value.length > 0) {
+      messages.value.push({
+        user: false,
+        cards: links.value,
+      })
+    } else {
+      messages.value.push({
+        text: 'No tengo enlaces disponibles en este momento.',
+        user: false,
+      })
+    }
     return
   }
+
+  // Respuesta por defecto
+  messages.value.push({
+    text: 'Recibido. ¿Puedo ayudarte con algo más? Puedo buscar recursos, información sobre tu supervisor o cualquier duda sobre el onboarding.',
+    user: false,
+  })
 }
+
+onMounted(() => {
+  loadApiData()
+})
 </script>

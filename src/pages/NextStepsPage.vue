@@ -1,78 +1,57 @@
 <template>
-  <q-layout view="lHh Lpr lFf">
-    <NavBar :hideMenu="true" />
+  <q-page class="q-pa-lg">
+    <ChatBubble :isUser="false">
+      <div class="text-h6">Próximos pasos del onboarding</div>
+      <div class="text-caption">
+        Completa las siguientes tareas para finalizar tu proceso de incorporación a TCS
+      </div>
+    </ChatBubble>
 
-    <q-page-container>
-      <q-page class="q-pt-sm q-px-md">
-        <div class="proximos-header row items-start">
-          <div class="col">
-            <div class="text-h5 text-weight-bold">Próximos pasos del onboarding</div>
-            <div class="text-caption">
-              Completa las siguientes tareas para finalizar tu proceso de incorporación a TCS
-            </div>
-          </div>
+    <div class="q-mt-lg">
+      <div class="row items-center justify-between q-mb-md">
+        <div class="text-h6 text-weight-bold">Tu Progreso</div>
+        <q-circular-progress :value="progressPercent" size="80" thickness="12" color="primary">
+          <div class="text-h6 q-pa-xs">{{ progressPercent }}%</div>
+        </q-circular-progress>
+      </div>
 
-          <div class="col-auto text-right">
-            <q-circular-progress
-              :value="progressPercent"
-              size="80"
-              thickness="12"
-              color="primary"
-              class="q-mb-sm"
-            >
-              <div class="text-h6 q-pa-xs">{{ progressPercent }}%</div>
-            </q-circular-progress>
-            <div class="text-caption">
-              {{ completedCount }} de {{ totalCount }} tareas completadas
-            </div>
-          </div>
-        </div>
+      <div class="text-caption text-grey-6 q-mb-md">
+        {{ completedCount }} de {{ totalCount }} tareas completadas
+      </div>
 
-        <q-separator spaced />
+      <q-banner v-if="errorMessage" dense class="bg-red-1 text-red q-mb-md">
+        {{ errorMessage }}
+      </q-banner>
 
-        <q-banner v-if="errorMessage" dense class="bg-red-1 text-red">
-          {{ errorMessage }}
-        </q-banner>
+      <div class="task-list">
+        <div v-for="task in tasks" :key="task.id" class="q-mb-md">
+          <q-card flat bordered class="task-card-inner" :class="statusClass(task)">
+            <div class="row items-center no-wrap q-gutter-md">
+              <div class="col-auto">
+                <q-checkbox v-model="task.completed" @update:model-value="() => toggleTask(task)" />
+              </div>
 
-        <div class="task-list q-mt-md">
-          <div class="tasks-scroll">
-            <div v-for="task in tasks" :key="task.id" class="task-card">
-              <q-card flat bordered class="task-card-inner" :class="statusClass(task)">
-                <div class="row items-center no-wrap">
-                  <div class="col-auto">
-                    <q-checkbox
-                      v-model="task.completed"
-                      @update:model-value="() => toggleTask(task)"
-                    />
-                  </div>
+              <div class="col">
+                <div class="text-weight-bold task-title">{{ task.title }}</div>
+                <div class="text-caption text-grey-7 q-mt-xs">{{ task.description }}</div>
 
-                  <div class="col">
-                    <div class="row items-center justify-between">
-                      <div>
-                        <div class="text-weight-bold task-title">{{ task.title }}</div>
-                        <div class="text-caption text-grey-7">{{ task.description }}</div>
-                      </div>
-
-                      <div class="row items-center q-gutter-sm">
-                        <q-chip dense class="category-chip">{{ task.category }}</q-chip>
-                        <q-badge :color="priorityColor(task.priority)" align="middle">{{
-                          task.priority
-                        }}</q-badge>
-                      </div>
-                    </div>
-                  </div>
+                <div class="row items-center q-gutter-sm q-mt-sm">
+                  <q-chip dense class="category-chip" size="sm">{{ task.category }}</q-chip>
+                  <q-badge :color="priorityColor(task.priority)" align="middle">{{
+                    task.priority
+                  }}</q-badge>
                 </div>
-              </q-card>
+              </div>
             </div>
-          </div>
+          </q-card>
         </div>
-      </q-page>
-    </q-page-container>
-  </q-layout>
+      </div>
+    </div>
+  </q-page>
 </template>
 
 <script setup>
-import NavBar from 'src/components/NavBar.vue'
+import ChatBubble from 'src/components/ChatBubble.vue'
 import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
 
@@ -182,20 +161,6 @@ function fakeUpdate() {
 </script>
 
 <style scoped>
-.proximos-header {
-  margin-bottom: 8px;
-}
-.task-list {
-  margin-top: 12px;
-}
-.tasks-scroll {
-  max-height: calc(100vh - 240px);
-  overflow-y: auto;
-  padding-right: 8px;
-}
-.task-card {
-  margin-bottom: 12px;
-}
 .task-card-inner {
   padding: 14px;
   border-radius: 10px;
@@ -220,11 +185,5 @@ function fakeUpdate() {
 }
 .q-banner.bg-red-1 {
   border-radius: 6px;
-  margin-bottom: 12px;
-}
-
-/* Mantener identidad visual: blanco, azul y negro */
-body {
-  color: #0b0b0b;
 }
 </style>
