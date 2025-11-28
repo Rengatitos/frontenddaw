@@ -40,15 +40,18 @@ const routes = [
         component: () => import('src/pages/AdminDashboardPage.vue'),
       },
     ],
+  },
+
+  {
     path: '/forgot-password',
     component: () => import('src/pages/ForgotPasswordPage.vue'),
   },
 
-  // Admin area wrapped by AdminLayout and protected by a route guard (meta.requiresAdmin)
+  // Admin area wrapped by AdminLayout and protected by a route guard
   {
     path: '/admin',
     component: () => import('src/layouts/AdminLayout.vue'),
-    meta: { requiresAdmin: true },
+    meta: { requiresAuth: true, role: 'Administrador' },
     children: [
       { path: '', redirect: '/admin/dashboard' },
       { path: 'dashboard', component: () => import('src/pages/Admin/DashboardPage.vue') },
@@ -58,6 +61,10 @@ const routes = [
       { path: 'employees', component: () => import('src/pages/Admin/EmployeesPage.vue') },
       { path: 'settings', component: () => import('src/pages/Admin/SettingsPage.vue') },
     ],
+  },
+  {
+    path: '/unauthorized',
+    component: () => import('src/pages/ErrorUnauthorized.vue'),
   },
 
   {
