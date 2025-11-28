@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
-import axios from 'axios'
+import { api } from 'src/boot/axios'
+import { isValidObjectId } from 'src/composables/useUsuario'
+import { Notify } from 'quasar'
 
 export const useNotificationsStore = defineStore('notifications', {
   state: () => ({
@@ -18,27 +20,57 @@ export const useNotificationsStore = defineStore('notifications', {
     async fetchNotifications() {
       this.loading = true
       try {
-        const token = localStorage.getItem('token')
+        // const auth = useAuthStore()  // not required for id extraction; usamos obtenerIdUsuarioSeguro
 
-        // Obtener tareas del usuario
-        const response = await axios.get('https://backend-daw.onrender.com/api/Tarea', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        // Obtener id del usuario desde localStorage.usuario (fuente de verdad)
+        let usuarioRef = null
+        try {
+          const raw = localStorage.getItem('usuario')
+          if (raw) {
+            const parsed = JSON.parse(raw)
+            usuarioRef = parsed && (parsed.id || parsed._id || null)
+          }
+        } catch {
+          usuarioRef = null
+        }
+        if (!usuarioRef || !isValidObjectId(usuarioRef)) {
+          Notify.create({ type: 'negative', message: 'ID inválido. Inicie sesión nuevamente.' })
+          window.location.href = '/login'
+          this.notifications = []
+          return
+        }
+
+        // Obtener actividades del usuario usando el endpoint correcto `actividad`
+        const resp = await api.get(`Actividad/usuario/${usuarioRef}`)
+        const data = Array.isArray(resp.data)
+          ? resp.data
+          : Array.isArray(resp.data?.value)
+            ? resp.data.value
+            : Array.isArray(resp.data?.data)
+              ? resp.data.data
+              : []
+
+        this.notifications = data.map((tarea) => {
+          const raw = tarea.estado || tarea.status || ''
+          const s = String(raw || '').trim()
+          const estadoNorm = s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : ''
+          const estadoLower = estadoNorm.toLowerCase()
+          return {
+            id: tarea._id || tarea.id,
+            titulo: tarea.titulo || tarea.nombre || tarea.name || 'Sin título',
+            descripcion: tarea.descripcion || tarea.description || 'Tarea pendiente',
+            fechaLimite: tarea.fecha_fin || tarea.fechaLimite || tarea.dueDate || '',
+            estado:
+              estadoLower === 'completada'
+                ? 'completada'
+                : tarea.fecha_fin && new Date(tarea.fecha_fin) < new Date()
+                  ? 'vencida'
+                  : 'pendiente',
+            completed: estadoLower === 'completada' || tarea.completed === true,
+            leida: false,
+            prioridad: tarea.prioridad || tarea.priority || 'media',
+          }
         })
-
-        // Mapear tareas como notificaciones
-        const data = Array.isArray(response.data) ? response.data : response.data.data || []
-        this.notifications = data.map((tarea) => ({
-          id: tarea._id || tarea.id,
-          titulo: tarea.nombre || tarea.name || 'Sin título',
-          descripcion: tarea.descripcion || tarea.description || 'Tarea pendiente',
-          fechaLimite: tarea.fechaLimite || tarea.dueDate || '',
-          estado: (tarea.estado || tarea.status) === 'Completada' ? 'completada' : 'pendiente',
-          completed: (tarea.estado || tarea.status) === 'Completada' || tarea.completed === true,
-          leida: false,
-          prioridad: tarea.prioridad || tarea.priority || 'media',
-        }))
       } catch (error) {
         console.error('Error fetching tasks as notifications:', error)
         // Usar tareas vacías si hay error

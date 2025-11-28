@@ -105,10 +105,7 @@
       </div>
     </div>
 
-    <div
-      class="row q-col-gutter-lg justify-center q-mt-lg"
-      style="max-width: 1200px; margin: 0 auto"
-    >
+    <div class="row q-col-gutter-lg justify-center q-mt-lg" style="max-width: 1200px; margin: 0 auto">
       <div class="col-12 col-md-7"></div>
       <div class="col-12 col-md-5">
         <div class="text-h6 text-weight-bold text-grey-9 q-mb-sm">Tu Supervisor</div>
@@ -157,10 +154,10 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { useNotificationsStore } from 'src/stores/notifications'
 import { api } from 'src/boot/axios'
-import { Notify } from 'quasar'
+import { Notify, useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
 import { isValidObjectId } from 'src/composables/useUsuario'
 import { useActividades } from 'src/composables/useActividades'
@@ -168,6 +165,7 @@ import { useActividades } from 'src/composables/useActividades'
 export default {
   name: 'DashboardPage',
   setup() {
+    const $q = useQuasar()
     const notificationsStore = useNotificationsStore()
     const router = useRouter()
 
@@ -191,36 +189,21 @@ export default {
 
     const loadUserData = async () => {
       try {
+        const userStorage = localStorage.getItem('user')
         const token = localStorage.getItem('token')
-        // Preferir el objeto `usuario` guardado en localStorage
-        let usuarioRef = null
-        try {
-          const rawUsuario = localStorage.getItem('usuario')
-          if (rawUsuario) {
-            const usuarioObj = JSON.parse(rawUsuario)
-            if (usuarioObj && (usuarioObj.nombre || usuarioObj.name)) {
-              nombreUsuario.value = usuarioObj.nombre || usuarioObj.name
-            }
-            usuarioRef =
-              usuarioObj && (usuarioObj.id || usuarioObj._id || usuarioObj.usuarioId || null)
+        const usuarioRef = localStorage.getItem('usuarioRef')
+
+        if (userStorage) {
+          const user = JSON.parse(userStorage)
+          if (user.nombre) {
+            nombreUsuario.value = user.nombre
           }
-        } catch {
-          // ignore parse errors and fallback to legacy keys
         }
 
-        // Require explicit `usuario` object; avoid using role refs as user id
-        if (!usuarioRef) {
-          console.warn(
-            'No se encontró `localStorage.usuario`. Redirigiendo a login para reautenticación.',
-          )
-          Notify.create({ type: 'negative', message: 'Sesión inválida. Inicie sesión nuevamente.' })
-          router.push('/login')
-          return
-        }
-
-        // Cargar supervisor si existe
+        // Cargar supervisor si existe (mantener dependencia de token para este recurso)
         if (token) {
           try {
+            // Obtener rolRef del usuario autenticado
             const userStorage = localStorage.getItem('user')
             const user = userStorage ? JSON.parse(userStorage) : null
             const rolRef = user && (user.rol_ref || user.rolRef || user.role?._id || user.role?.id)
@@ -233,7 +216,9 @@ export default {
                 })
                 router.push('/login')
               } else {
+                // Obtener usuarios con el rol del usuario actual
                 const supervisorRes = await api.get(`Usuario/rol/${rolRef}`)
+                // Tomar el primer usuario del array como supervisor
                 const supervisorData = Array.isArray(supervisorRes.data)
                   ? supervisorRes.data[0]
                   : supervisorRes.data?.data?.[0]
@@ -252,20 +237,10 @@ export default {
           }
         }
 
-        // Cargar actividades
+        // Cargar actividades del usuario usando el composable
         if (usuarioRef) {
-          console.log('ID REAL DEL USUARIO:', usuarioRef)
-          console.log('Cargando actividades para usuarioRef:', usuarioRef)
           await obtenerActividadesUsuario(usuarioRef)
           await obtenerPendientes(usuarioRef)
-          console.log(
-            'Completadas:',
-            completadas.value.length,
-            'Pendientes:',
-            pendientes.value.length,
-          )
-        } else {
-          console.warn('No se encontró usuarioRef en localStorage')
         }
       } catch (error) {
         console.error('Error loading user data:', error)
@@ -274,6 +249,7 @@ export default {
 
     onMounted(() => {
       loadUserData()
+      // Cargar notificaciones
       notificationsStore.fetchNotifications()
     })
 
@@ -287,6 +263,7 @@ export default {
     }
   },
 }
+</script>
 </script>
 
 <style scoped>

@@ -40,7 +40,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import ChatBubble from 'src/components/ChatBubble.vue'
-import axios from 'axios'
+import { api } from 'src/boot/axios'
 
 const supervisor = ref({
   nombre: 'Supervisor',
@@ -62,25 +62,39 @@ const loadSupervisor = async () => {
       return
     }
 
-    // Usar el mismo endpoint que el DashboardPage
-    const supervisorRes = await axios.get(
-      'https://backend-daw.onrender.com/api/Usuario/supervisor',
-      { headers: { Authorization: `Bearer ${token}` } },
-    )
+    // Obtener rolRef del usuario autenticado
+    const userStorage = localStorage.getItem('user')
+    const user = userStorage ? JSON.parse(userStorage) : null
+    const rolRef = user && (user.rol_ref || user.rolRef || user.role?._id || user.role?.id)
+
+    if (!rolRef) {
+      console.warn('No se encontró rol_ref del usuario')
+      return
+    }
+
+    // Obtener usuarios con el rol del usuario actual
+    const supervisorRes = await api.get(`Usuario/rol/${rolRef}`)
 
     if (supervisorRes.data) {
-      const s = supervisorRes.data
-      supervisor.value = {
-        nombre: s.nombre || 'Supervisor',
-        cargo: s.cargo || 'RRHH',
-        email: s.correo || s.email || '',
-        telefono: s.telefono || '',
-        iniciales: (s.nombre || 'S')
-          .split(' ')
-          .map((n) => n[0])
-          .join('')
-          .substring(0, 2)
-          .toUpperCase(),
+      // Si es un array, tomar el primer elemento
+      const supervisorArray = Array.isArray(supervisorRes.data)
+        ? supervisorRes.data
+        : [supervisorRes.data]
+      const s = supervisorArray[0]
+
+      if (s) {
+        supervisor.value = {
+          nombre: s.nombre || 'Supervisor',
+          cargo: s.cargo || 'RRHH',
+          email: s.correo || s.email || '',
+          telefono: s.telefono || '',
+          iniciales: (s.nombre || 'S')
+            .split(' ')
+            .map((n) => n[0])
+            .join('')
+            .substring(0, 2)
+            .toUpperCase(),
+        }
       }
     }
   } catch (error) {

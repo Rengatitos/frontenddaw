@@ -1,5 +1,10 @@
 import { defineStore, acceptHMRUpdate } from 'pinia'
 import { api } from 'src/boot/axios'
+import {
+  obtenerIdUsuarioSeguro,
+  isValidObjectId,
+  normalizeIdFromObject,
+} from 'src/composables/useUsuario'
 
 // MongoDB role id for the Administrator role (from DB)
 export const ADMIN_ROLE_ID = '6913adbcca79acfd93858d5c'
@@ -16,7 +21,10 @@ export const useAuthStore = defineStore('auth', {
     user: JSON.parse(localStorage.getItem('user') || 'null'),
     role: localStorage.getItem('role') || null,
     roleId: localStorage.getItem('roleId') || null,
-    isAdmin: (localStorage.getItem('roleId') === ADMIN_ROLE_ID) || (localStorage.getItem('role') === 'Administrador') || false,
+    isAdmin:
+      localStorage.getItem('roleId') === ADMIN_ROLE_ID ||
+      localStorage.getItem('role') === 'Administrador' ||
+      false,
   }),
 
   getters: {
@@ -39,13 +47,7 @@ export const useAuthStore = defineStore('auth', {
 
         let resp = null
         // attempt endpoints in order (include lowercase 'usuario' variants used by backend)
-        const endpoints = [
-          'usuario/login',
-          'Usuario/login',
-          'auth/login',
-          'Usuario',
-          'usuario',
-        ]
+        const endpoints = ['usuario/login', 'Usuario/login', 'auth/login', 'Usuario', 'usuario']
 
         for (const body of tryBodies) {
           for (const ep of endpoints) {
@@ -82,9 +84,17 @@ export const useAuthStore = defineStore('auth', {
           // try to fetch user list and find by email/correo
           try {
             const listRes = await api.get('Usuario')
-            const allUsers = Array.isArray(listRes.data) ? listRes.data : listRes.data.users || listRes.data || []
+            const allUsers = Array.isArray(listRes.data)
+              ? listRes.data
+              : listRes.data.users || listRes.data || []
             const lookupEmail = (credentials.email || credentials.correo || '').toLowerCase()
-            user = allUsers.find(u => (u.email || u.correo || u.nombre || '').toString().toLowerCase().includes(lookupEmail)) || null
+            user =
+              allUsers.find((u) =>
+                (u.email || u.correo || u.nombre || '')
+                  .toString()
+                  .toLowerCase()
+                  .includes(lookupEmail),
+              ) || null
           } catch {
             // ignore — user may be returned by login endpoint
           }
@@ -103,7 +113,8 @@ export const useAuthStore = defineStore('auth', {
           }
         } else {
           // fallback: extract role from other common fields (could be string, object or ObjectId reference)
-          let rawRole = user?.rol || user?.rol_ref || user?.rolRef || localStorage.getItem('role') || null
+          let rawRole =
+            user?.rol || user?.rol_ref || user?.rolRef || localStorage.getItem('role') || null
 
           // If rawRole is an object with _id, use its id
           let roleId = null
@@ -157,13 +168,45 @@ export const useAuthStore = defineStore('auth', {
           localStorage.removeItem('roleId')
         }
         // Also expose a convenience boolean
-        this.isAdmin = (finalRoleId === ADMIN_ROLE_ID) || (finalRole === 'Administrador')
+        this.isAdmin = finalRoleId === ADMIN_ROLE_ID || finalRole === 'Administrador'
         if (this.isAdmin) {
           localStorage.setItem('role', 'Administrador')
         }
 
         // persist user/role if present
-        if (this.user) localStorage.setItem('user', JSON.stringify(this.user))
+        if (this.user) {
+          // Save under `usuario` as required
+          try {
+            localStorage.setItem('usuario', JSON.stringify(this.user))
+          } catch {
+            // ignore serialization issues
+          }
+
+          // Also keep legacy `user` key for backward compatibility briefly
+          try {
+            localStorage.setItem('user', JSON.stringify(this.user))
+          } catch {
+            /* noop */
+          }
+
+          // Determine a safe id and persist as legacy `idUsuario` as well
+          let safeId = null
+          if (this.user._id) safeId = normalizeIdFromObject(this.user._id)
+          if (!safeId && this.user.id) safeId = normalizeIdFromObject(this.user.id)
+          if (!safeId) {
+            try {
+              safeId = obtenerIdUsuarioSeguro()
+            } catch {
+              safeId = null
+            }
+          }
+
+          if (safeId && isValidObjectId(String(safeId).trim())) {
+            localStorage.setItem('idUsuario', String(safeId).trim())
+          } else {
+            localStorage.removeItem('idUsuario')
+          }
+        }
         if (this.role) localStorage.setItem('role', this.role)
 
         return { ok: true }
@@ -179,6 +222,8 @@ export const useAuthStore = defineStore('auth', {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       localStorage.removeItem('role')
+      localStorage.removeItem('idUsuario')
+      localStorage.removeItem('roleId')
       delete api.defaults.headers.common.Authorization
     },
   },

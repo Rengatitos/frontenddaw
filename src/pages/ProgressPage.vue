@@ -46,12 +46,15 @@
             </div>
 
             <q-list separator>
-              <q-item v-for="task in tasks" :key="task.id" class="q-py-md">
+              <q-item v-for="task in completedTasks" :key="task.id" class="q-py-md">
                 <q-item-section avatar style="min-width: 40px">
-                  <q-icon
-                    :name="task.completed ? 'check_circle' : 'radio_button_unchecked'"
-                    :color="task.completed ? 'indigo-6' : 'grey-4'"
-                    size="26px"
+                  <!-- Checkbox que permite desmarcar/completar y dispara la actualización en backend -->
+                  <q-checkbox
+                    :model-value="task.completed"
+                    @update:model-value="(val) => onToggleProgress(task, val)"
+                    dense
+                    size="24px"
+                    color="indigo-6"
                   />
                 </q-item-section>
 
@@ -139,60 +142,99 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
+import { Notify } from 'quasar'
+import { useRouter } from 'vue-router'
 import { useNotificationsStore } from 'src/stores/notifications'
-import axios from 'axios'
+import { api } from 'src/boot/axios'
+import { isValidObjectId } from 'src/composables/useUsuario'
 
 export default {
   name: 'ProgressPage',
   setup() {
     const notificationsStore = useNotificationsStore()
     const nombreUsuario = ref('Colaborador')
-    const progressPercentage = ref(0.33)
-    const tasksCompleted = ref(0)
-    const totalTasks = ref(6)
+    const tasks = ref([]) // todas las actividades del usuario (desde /Actividad/usuario/{usuarioRef})
 
-    const tasks = ref([
-      { id: 1, name: 'Completar perfil personal', status: 'Vencida', completed: true },
-      { id: 2, name: 'Revisar manual del empleado', status: 'Vencida', completed: true },
-      { id: 3, name: 'Configurar accesos de sistema', status: 'Vencida', completed: false },
-      { id: 4, name: 'Firmar documentos digitales', status: 'Vencida', completed: false },
-      { id: 5, name: 'Completar capacitación inicial', status: 'Vencida', completed: false },
-      { id: 6, name: 'Conocer al equipo', status: 'Vencida', completed: false },
-    ])
+    // Computeds para mantener aislada la vista de "Tu Progreso"
+    const totalTasks = computed(() => tasks.value.length)
+    const completedTasks = computed(() =>
+      tasks.value.filter((t) => (t.estado || t.status) === 'Completada' || t.completed === true),
+    )
+    const tasksCompleted = computed(() => completedTasks.value.length)
+    const progressPercentage = computed(() =>
+      totalTasks.value > 0 ? tasksCompleted.value / totalTasks.value : 0,
+    )
 
     const loadUserData = async () => {
       try {
-        const userStorage = localStorage.getItem('user')
         const token = localStorage.getItem('token')
-
-        if (userStorage) {
-          const user = JSON.parse(userStorage)
-          if (user.nombre) {
-            nombreUsuario.value = user.nombre
+        // Preferir objeto `usuario` si existe
+        try {
+          const rawUsuario = localStorage.getItem('usuario')
+          if (rawUsuario) {
+            const usuarioObj = JSON.parse(rawUsuario)
+            if (usuarioObj && (usuarioObj.nombre || usuarioObj.name)) {
+              nombreUsuario.value = usuarioObj.nombre || usuarioObj.name
+            }
+          } else {
+            const userStorage = localStorage.getItem('user')
+            if (userStorage) {
+              const user = JSON.parse(userStorage)
+              if (user && user.nombre) nombreUsuario.value = user.nombre
+            }
           }
+        } catch {
+          // ignore parse errors
         }
 
         if (token) {
           try {
-            const tasksRes = await axios.get('https://backend-daw.onrender.com/api/Tarea', {
-              headers: { Authorization: `Bearer ${token}` },
-            })
-            if (tasksRes.data) {
-              const taskList = Array.isArray(tasksRes.data)
-                ? tasksRes.data
-                : tasksRes.data.data || []
-              tasks.value = taskList.map((t) => ({
-                id: t._id || t.id,
-                name: t.nombre || t.name,
-                status: t.estado || t.status || 'Pendiente',
-                completed: (t.estado || t.status) === 'Completada' || t.completed === true,
-              }))
-              tasksCompleted.value = tasks.value.filter((t) => t.completed).length
-              totalTasks.value = tasks.value.length
-              progressPercentage.value =
-                totalTasks.value > 0 ? tasksCompleted.value / totalTasks.value : 0
+            // Preferir id real desde localStorage.usuario
+            const rawUsuario = localStorage.getItem('usuario')
+            if (!rawUsuario) {
+              Notify.create({
+                type: 'negative',
+                message: 'Sesión inválida. Inicie sesión nuevamente.',
+              })
+              const router = useRouter()
+              router.push('/login')
+              return
             }
+
+            const parsedUsuario = JSON.parse(rawUsuario)
+            const usuarioRef = parsedUsuario && (parsedUsuario.id || parsedUsuario._id)
+            if (!usuarioRef || !isValidObjectId(usuarioRef)) {
+              Notify.create({ type: 'negative', message: 'ID inválido. Inicie sesión nuevamente.' })
+              const router = useRouter()
+              router.push('/login')
+              return
+            }
+
+            // Obtener todas las actividades del usuario y delegar el filtrado a la UI de progreso
+            const tasksRes = await api.get(`Actividad/usuario/${usuarioRef}`)
+            const taskList = Array.isArray(tasksRes.data)
+              ? tasksRes.data
+              : Array.isArray(tasksRes.data?.value)
+                ? tasksRes.data.value
+                : Array.isArray(tasksRes.data?.data)
+                  ? tasksRes.data.data
+                  : []
+
+            // Guardar las actividades tal cual (manteniendo campo estado)
+            tasks.value = taskList.map((t) => {
+              const raw = t.estado || t.status || ''
+              const s = String(raw || '').trim()
+              const estado = s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : null
+              return {
+                id: t._id || t.id,
+                name: t.titulo || t.nombre || t.name || 'Sin título',
+                estado,
+                status: estado,
+                completed: estado === 'Completada' || t.completed === true,
+                fecha_fin: t.fecha_fin || null,
+              }
+            })
           } catch (err) {
             console.warn('No se pudieron cargar las tareas:', err)
           }
@@ -202,9 +244,77 @@ export default {
       }
     }
 
+    // Escuchar evento global enviado cuando se completa una actividad en otra vista
+    function onActividadCompletada() {
+      loadUserData()
+    }
+
+    // Handler para togglear completion desde esta pantalla
+    async function onToggleProgress(task, shouldBeCompleted) {
+      try {
+        // Obtener id real desde localStorage.usuario
+        let usuarioRef = null
+        try {
+          const raw = localStorage.getItem('usuario')
+          if (raw) {
+            const parsed = JSON.parse(raw)
+            usuarioRef = parsed && (parsed.id || parsed._id || null)
+          }
+        } catch {
+          usuarioRef = null
+        }
+        if (!usuarioRef || !isValidObjectId(usuarioRef)) {
+          Notify.create({ type: 'negative', message: 'ID inválido. Inicie sesión nuevamente.' })
+          const router = useRouter()
+          router.push('/login')
+          return
+        }
+
+        if (shouldBeCompleted) {
+          // Marcar como completada (endpoint existente)
+          await api.patch(`Actividad/${task.id}/completar/${usuarioRef}`)
+          Notify.create({ type: 'positive', message: 'Actividad marcada como completada.' })
+          // Notificar a otras vistas
+          window.dispatchEvent(new CustomEvent('actividad-completada', { detail: { id: task.id } }))
+        } else {
+          // Intentar marcar como pendiente: primero PATCH genérico, si falla intentar endpoint 'descompletar'
+          try {
+            await api.patch(`Actividad/${task.id}`, { estado: 'Pendiente', usuarioRef })
+          } catch (err) {
+            if (err.response?.status === 404) {
+              // Intentar endpoint alternativo
+              await api.patch(`Actividad/${task.id}/descompletar/${usuarioRef}`)
+            } else {
+              throw err
+            }
+          }
+
+          Notify.create({ type: 'positive', message: 'Actividad marcada como pendiente.' })
+          // Notificar a otras vistas que una actividad cambió (para que Próximos Pasos la reciba)
+          window.dispatchEvent(
+            new CustomEvent('actividad-actualizada', { detail: { id: task.id } }),
+          )
+        }
+
+        // Refrescar datos locales para recalcular la barra
+        await loadUserData()
+      } catch (err) {
+        console.error('Error actualizando actividad desde Progreso:', err)
+        Notify.create({
+          type: 'negative',
+          message: 'No se pudo actualizar la actividad. Intente nuevamente.',
+        })
+      }
+    }
+
     onMounted(() => {
       loadUserData()
       notificationsStore.fetchNotifications()
+      window.addEventListener('actividad-completada', onActividadCompletada)
+    })
+
+    onUnmounted(() => {
+      window.removeEventListener('actividad-completada', onActividadCompletada)
     })
 
     return {
@@ -213,6 +323,8 @@ export default {
       progressPercentage,
       tasksCompleted,
       totalTasks,
+      completedTasks,
+      onToggleProgress,
     }
   },
 }

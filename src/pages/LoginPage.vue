@@ -114,7 +114,10 @@ export default {
           return
         }
 
-        $q.notify({ type: 'positive', message: `Bienvenido ${auth.user?.name || auth.user?.email || ''}` })
+        $q.notify({
+          type: 'positive',
+          message: `Bienvenido ${auth.user?.nombre || auth.user?.name || auth.user?.email || ''}`,
+        })
 
         // redirect based on role (expecting exact 'Administrador')
         if (auth.role === 'Administrador') {

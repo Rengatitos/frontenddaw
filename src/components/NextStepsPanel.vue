@@ -12,7 +12,7 @@
         <q-circular-progress
           :value="progressPercent"
           size="80"
-          thickness="12"
+          :thickness="0.2"
           color="primary"
           class="q-mb-sm"
         >
