@@ -2,19 +2,22 @@
   <q-layout view="lHh Lpr lFf" style="--admin-primary: #30b0c4">
     <!-- QHeader -->
     <q-header elevated class="bg-white q-px-md">
-      <div class="row items-center justify-between q-gutter-sm" style="height: 64px">
-        <div class="text-h6" :style="{ color: 'var(--admin-primary)' }">Administración RRHH</div>
+      <div class="row items-center justify-between q-gutter-sm" style="height:64px">
+        <div class="text-h6" :style="{ color: '#0b3d91' }">Administración RRHH</div>
         <div class="row items-center">
+          <!-- Clickable avatar opens profile dialog -->
           <q-avatar
             square
-            size="36px"
+            size="40px"
             class="q-mr-sm"
-            :style="{ background: 'var(--admin-primary)', color: 'white' }"
+            :style="{ background: '#0b3d91', color: 'white', cursor: 'pointer' }"
+            v-ripple
+            @click="profileOpen = true"
           >
             <q-icon name="person" />
           </q-avatar>
           <div class="text-caption q-mr-md">{{ displayName }}</div>
-          <q-btn flat round dense icon="logout" label="Cerrar sesión" @click="handleLogout" />
+          <q-btn flat round dense icon="logout" label="Cerrar sesión" @click="handleLogout" :style="{ color: '#0b3d91' }" />
         </div>
       </div>
     </q-header>
@@ -30,17 +33,8 @@
       content-class="admin-drawer"
     >
       <div class="q-pa-md">
-        <div class="text-subtitle2 q-mb-md" :style="{ color: 'var(--admin-primary)' }">
-          Panel Admin
-        </div>
+        <div class="text-subtitle2 q-mb-md" :style="{ color: '#0b3d91' }">Panel Administrador</div>
         <q-list>
-          <q-item clickable v-ripple to="/admin/dashboard">
-            <q-item-section avatar>
-              <div class="menu-avatar"><q-icon name="dashboard" /></div>
-            </q-item-section>
-            <q-item-section>Dashboard</q-item-section>
-          </q-item>
-
           <q-item clickable v-ripple to="/admin/interactions">
             <q-item-section avatar>
               <div class="menu-avatar"><q-icon name="history" /></div>
@@ -82,23 +76,74 @@
     <q-page-container class="bg-grey-2">
       <router-view />
     </q-page-container>
+    <!-- Profile Dialog -->
+    <q-dialog v-model="profileOpen">
+      <q-card style="min-width: 380px; max-width: 480px;">
+        <q-card-section class="row items-center q-gutter-sm" style="background:#0b3d91; color: white; border-top-left-radius:6px; border-top-right-radius:6px;">
+          <q-avatar size="56px" style="background: #0b3d91; color: white; border: 2px solid rgba(255,255,255,0.08);">
+            <div style="font-weight:600">{{ initials }}</div>
+          </q-avatar>
+          <div class="column q-ml-md">
+            <div style="font-weight:700">{{ profileName }}</div>
+            <div class="text-caption">Administrador</div>
+          </div>
+        </q-card-section>
+
+        <q-card-section>
+          <div class="q-mb-sm"><strong>Correo</strong></div>
+          <div class="text-subtitle2 q-mb-md">{{ profileEmail || '-' }}</div>
+
+          <div class="q-mb-sm"><strong>Teléfono</strong></div>
+          <div class="text-subtitle2">{{ profilePhone || '-' }}</div>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Cerrar" color="primary" v-close-popup @click="profileOpen = false" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-layout>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
 
 const open = ref(true)
 const auth = useAuthStore()
+const router = useRouter()
+const $q = useQuasar()
 
-const displayName = computed(() => auth.user?.name || auth.user?.email || 'Usuario')
+const displayName = computed(() => auth.user?.name || auth.user?.nombre || auth.user?.email || 'Usuario')
 
 function handleLogout() {
-  auth.logout()
-  // redirect to login
-  window.location.href = '#/login'
+  // Clear auth and redirect using router for proper SPA navigation
+  try {
+    auth.logout()
+    $q.notify({ type: 'positive', message: 'Sesión cerrada. Redirigiendo al login.' })
+    router.push({ path: '/login' })
+  } catch (e) {
+    console.error('Logout error:', e)
+    $q.notify({ type: 'negative', message: 'Error cerrando sesión' })
+    // fallback to hash change if router push fails
+    window.location.href = '#/login'
+  }
 }
+
+// Profile dialog state and computed fields
+const profileOpen = ref(false)
+const profileName = computed(() => auth.user?.nombre || auth.user?.name || auth.user?.email || '')
+const profileEmail = computed(() => auth.user?.correo || auth.user?.email || '')
+const profilePhone = computed(() => auth.user?.telefono || auth.user?.phone || '')
+const initials = computed(() => {
+  const n = profileName.value || profileEmail.value || ''
+  const parts = n.toString().trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return ''
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+})
 </script>
 
 <style scoped>

@@ -17,6 +17,7 @@
         <q-btn flat dense label="Próximos Pasos" to="/next-steps" class="nav-btn" />
         <q-btn flat dense label="Enlaces Útiles" to="/useful-links" class="nav-btn" />
         <q-btn v-permission="'Administrador'" flat dense label="Panel Admin" to="/admin" class="nav-btn" />
+        <q-btn v-permission="'Administrador'" flat dense label="Empleados" to="/admin/employees" class="nav-btn" />
       </div>
 
       <q-space />

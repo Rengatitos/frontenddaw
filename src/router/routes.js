@@ -53,7 +53,7 @@ const routes = [
     component: () => import('src/layouts/AdminLayout.vue'),
     meta: { requiresAdmin: true },
     children: [
-      { path: '', redirect: '/admin/dashboard' },
+      { path: '', redirect: '/admin/interactions' },
       { path: 'dashboard', component: () => import('src/pages/Admin/DashboardPage.vue') },
       { path: 'interactions', component: () => import('src/pages/Admin/InteractionsPage.vue') },
       { path: 'conversations', component: () => import('src/pages/Admin/ConversationsPage.vue') },

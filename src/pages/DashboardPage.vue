@@ -224,16 +224,16 @@ export default {
 
           // Cargar tareas del usuario
           try {
-            const tasksRes = await api.get('Tarea')
+            const tasksRes = await api.get('Actividad')
             if (tasksRes.data) {
               const taskList = Array.isArray(tasksRes.data)
                 ? tasksRes.data
                 : tasksRes.data.data || []
               tasks.value = taskList.map((t) => ({
-                id: t._id || t.id,
-                name: t.nombre || t.name,
+                id: t.id || t._id || t.id,
+                name: t.titulo || t.nombre || t.name,
                 status: t.estado || t.status || 'Pendiente',
-                completed: (t.estado || t.status) === 'Completada' || t.completed === true,
+                completed: typeof t.estado === 'string' && t.estado.toLowerCase().includes('complet'),
               }))
               tasksCompleted.value = tasks.value.filter((t) => t.completed).length
               totalTasks.value = tasks.value.length

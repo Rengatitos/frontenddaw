@@ -185,6 +185,16 @@ export const useAuthStore = defineStore('auth', {
       } catch { void 0 }
     },
     async login(credentials) {
+      // Validate incoming credentials early to avoid useless network calls
+      const incomingEmail = credentials?.email || credentials?.correo || credentials?.username || null
+      const incomingPassword = credentials?.password || credentials?.pass || null
+      if (!incomingEmail || !incomingEmail.toString().trim()) {
+        return { ok: false, error: new Error('El correo o email es requerido') }
+      }
+      if (!incomingPassword || !incomingPassword.toString().trim()) {
+        return { ok: false, error: new Error('La contraseña es requerida') }
+      }
+
       // Try multiple login endpoints/payload shapes to be compatible with backend variants.
       try {
         // keep a copy of credentials to try various shapes
@@ -198,7 +208,7 @@ export const useAuthStore = defineStore('auth', {
         ]
 
         let resp = null
-        // attempt endpoints in order (include lowercase 'usuario' variants used by backend)
+        // attempt endpoints in order (include lowercase 'usuario' variants used by backend
         const endpoints = [
           'usuario/login',
           'Usuario/login',
@@ -284,14 +294,26 @@ export const useAuthStore = defineStore('auth', {
         let finalRole = null
         let finalRoleId = null
 
-        // Strategy 1: Check user.rol (or user.Rol) - contains the ROLE ID from backend
+        // Strategy 1: Check user.rol (or user.Rol) - backend may return either ROLE ID or ROLE NAME
         const userRoleField = user?.rol || user?.Rol || user?.rolRef || user?.RolRef || null
         if (userRoleField) {
-          finalRoleId = userRoleField
-          // Map ID to role name
-          const roleById = getRoleNameFromId(userRoleField)
-          if (roleById) {
-            finalRole = roleById
+          if (typeof userRoleField === 'string' && /^[0-9a-fA-F]{24}$/.test(userRoleField)) {
+            // it's an id
+            finalRoleId = userRoleField
+            const roleById = getRoleNameFromId(userRoleField)
+            if (roleById) finalRole = roleById
+          } else if (typeof userRoleField === 'string') {
+            // likely a role NAME like 'Administrador' or 'Usuario'
+            const norm = userRoleField.toString().toLowerCase()
+            if (norm.includes('admin')) {
+              finalRole = 'Administrador'
+              finalRoleId = ROLE_ID_ADMIN
+            } else if (norm.includes('usuario') || norm.includes('user')) {
+              finalRole = 'Usuario'
+              finalRoleId = ROLE_ID_USER
+            } else {
+              finalRole = normalizeRole(userRoleField)
+            }
           }
         }
 

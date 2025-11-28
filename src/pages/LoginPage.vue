@@ -9,7 +9,7 @@
         <h2 class="text-h4 text-weight-bold q-mb-xs">Ingresar</h2>
         <p class="text-grey-7 q-mb-lg">Ingresa tus credenciales</p>
 
-        <q-form @submit.prevent="handleLogin" class="q-gutter-md">
+        <q-form ref="loginForm" @submit.prevent="handleLogin" class="q-gutter-md">
           <q-input
             v-model="email"
             label="Email"
@@ -101,6 +101,7 @@ export default {
     const remember = ref(false)
     const loading = ref(false)
     const showPassword = ref(false)
+    const loginForm = ref(null)
 
     const auth = useAuthStore()
 
@@ -129,6 +130,34 @@ export default {
     }
 
     const handleLogin = async () => {
+      // validate form fields via QForm rules first
+      if (loginForm.value && typeof loginForm.value.validate === 'function') {
+        const ok = await loginForm.value.validate()
+        if (!ok) {
+          $q.notify({ type: 'negative', message: 'Corrige los campos del formulario' })
+          return
+        }
+      }
+
+      // basic sanity checks before contacting backend
+      const emailVal = (email.value || '').toString().trim()
+      const passwordVal = (password.value || '').toString()
+      if (!emailVal) {
+        $q.notify({ type: 'negative', message: 'El correo es requerido' })
+        return
+      }
+      if (!passwordVal) {
+        $q.notify({ type: 'negative', message: 'La contraseña es requerida' })
+        return
+      }
+
+      // optional simple email format check
+      const emailLike = /\S+@\S+\.\S+/.test(emailVal)
+      if (!emailLike) {
+        // backend accepts 'correo' or other identifiers; warn but still allow
+        $q.notify({ type: 'warning', message: 'El correo parece inválido, se intentará de todas formas' })
+      }
+
       loading.value = true
       try {
         const payload = { email: email.value, correo: email.value, password: password.value }
