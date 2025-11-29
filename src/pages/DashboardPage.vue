@@ -14,6 +14,22 @@
       <div class="text-subtitle1 text-grey-7">Estamos emocionados de tenerte en nuestro equipo</div>
     </div>
 
+    <!-- Floating Chatbot Icon -->
+    <div class="floating-chatbot-container" @click="openChatbot" @mouseenter="showChatBubble = true" @mouseleave="showChatBubble = false">
+      <transition appear enter-active-class="animated fadeIn" leave-active-class="animated fadeOut">
+        <div v-if="showChatBubble" class="chat-bubble">
+          Soy tu asistente onboarding, ¡conversa conmigo si tienes dudas!
+        </div>
+      </transition>
+      <div class="chatbot-icon">
+        <img
+          src="https://i.pinimg.com/736x/7e/4e/eb/7e4eebfd3f66d18b69139a332974d43b.jpg"
+          alt="Chatbot"
+          class="chatbot-image"
+        />
+      </div>
+    </div>
+
     <div class="row q-col-gutter-lg justify-center" style="max-width: 1200px; margin: 0 auto">
       <div class="col-12 col-md-7">
         <div class="row items-center justify-between q-mb-sm">
@@ -262,6 +278,10 @@ export default {
       progressPercentage,
       tasksCompleted,
       totalTasks,
+      showChatBubble: ref(false),
+      openChatbot() {
+        window.open('https://rengatitos.github.io/DAWChatBot/#/chat', '_blank')
+      },
     }
   },
 }
@@ -270,5 +290,102 @@ export default {
 <style scoped>
 .font-arial {
   font-family: 'Arial', sans-serif;
+}
+
+/* Floating Chatbot Styles */
+.floating-chatbot-container {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  z-index: 1000;
+  cursor: pointer;
+}
+
+.chatbot-icon {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  border: 2px solid #0b3d91;
+}
+
+.chatbot-icon:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(11, 61, 145, 0.3);
+}
+
+.chatbot-image {
+  width: 95%;
+  height: 95%;
+  border-radius: 50%;
+  object-fit: contain;
+}
+
+.chat-bubble {
+  position: absolute;
+  bottom: 90px;
+  right: 0;
+  background: #0b3d91;
+  color: white;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  max-width: 220px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(11, 61, 145, 0.3);
+  white-space: normal;
+  margin-bottom: 10px;
+}
+
+.chat-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  right: 15px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 0 solid transparent;
+  border-top: 8px solid #0b3d91;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.animated {
+  animation-duration: 0.3s;
+}
+
+.fadeIn {
+  animation-name: fadeIn;
+}
+
+.fadeOut {
+  animation-name: fadeOut;
 }
 </style>
