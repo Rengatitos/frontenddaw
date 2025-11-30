@@ -35,6 +35,14 @@ export default defineRouter(function (/* { store, ssrContext } */) {
 
   // Route guard using Pinia auth store. Supports `meta.requiresAdmin` and `meta.roles` (array)
   Router.beforeEach((to, from, next) => {
+    // Restrict direct access to onboarding chat unless opened from another window or with explicit allow flag
+    if (to.path === '/onboarding-chat') {
+      const hasOpener = typeof window !== 'undefined' && window.opener
+      const allowed = to.query && (to.query.allow === '1' || to.query.from === 'dashboard')
+      if (!hasOpener && !allowed) {
+        return next({ path: '/forbidden' })
+      }
+    }
     // gather required roles from matched routes (if any)
     const requiredRoles = to.matched.reduce((acc, r) => {
       if (r.meta && r.meta.roles) {

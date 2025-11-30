@@ -8,9 +8,18 @@
         v-model="message"
         placeholder="Escribe palabras clave como 'ver intranet'..."
         @keyup.enter="send"
+        :disable="loading"
       >
         <template #append>
-          <q-btn color="primary" unelevated rounded icon="send" @click="send" />
+          <q-btn
+            color="primary"
+            unelevated
+            rounded
+            icon="send"
+            @click="send"
+            :disable="loading"
+            :loading="loading"
+          />
         </template>
       </q-input>
     </div>
@@ -20,10 +29,15 @@
 <script setup>
 import { ref } from 'vue'
 
+const props = defineProps({
+  loading: { type: Boolean, default: false },
+})
+
 const message = ref('')
 const emit = defineEmits(['send'])
 
 function send() {
+  if (props.loading) return
   if (message.value.trim()) {
     emit('send', message.value)
     message.value = ''

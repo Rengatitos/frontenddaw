@@ -252,6 +252,19 @@ function fakeUpdate() {
     }, 300)
   })
 }
+
+// Helper para abrir el chatbot en una nueva ventana con bandera de acceso
+function openChatbot() {
+  const base = window.location.origin
+  // Usamos modo hash si aplica; Quasar setea history/hash vía router
+  const isHash = (import.meta.env.VUE_ROUTER_MODE || '').toLowerCase() !== 'history'
+  const path = isHash ? '/#/onboarding-chat?allow=1' : '/onboarding-chat?allow=1'
+  const url = `${base}${path}`
+  window.open(url, '_blank')
+}
+
+// Exponer para uso en template si se requiere (script setup)
+defineExpose({ openChatbot })
 </script>
 
 <style scoped>

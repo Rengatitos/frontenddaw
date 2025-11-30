@@ -10,7 +10,7 @@
           rounded
           class="suggestion-btn"
           :label="q"
-          @click="$emit('select', q)"
+          @click="emitSelect(q)"
         />
       </div>
     </div>
@@ -18,15 +18,23 @@
 </template>
 
 <script setup>
+const emit = defineEmits(['select'])
+const emitSelect = (q) => emit('select', q)
+
+// Preguntas creadas según el onboarding cultural y operativo de una empresa estilo TCS.
 const questions = [
-  '¿Qué documentos debo presentar?',
-  '¿Cómo contacto a mi supervisora?',
-  '¿Cuál es el horario de trabajo?',
-  '¿Dónde subo mi contrato?',
-  '¿Qué beneficios ofrece TCS?',
-  '¿Qué formación debo completar?',
+  '¿Cómo puedo adaptarme más rápido a la empresa?',
+  '¿Cómo funciona el día a día aquí?',
+  '¿Cómo es el proceso de onboarding?',
+  'Resumen del Manual del Colaborador',
+  'Resumen de la Cultura y Valores',
+  'Resumen del Código de Ética',
+  'Resumen de Políticas de Seguridad TI',
+  'Resumen de la Guía del Primer Mes',
+  '¿Qué herramientas utilizamos en TCS?',
+  '¿A quién puedo pedir ayuda?',
   'Ver intranet',
-  'Ver todo',
+  'Ver todo'
 ]
 </script>
 
@@ -40,6 +48,7 @@ const questions = [
   text-align: left;
   padding-left: 0.9rem;
   border: 1px solid rgba(16, 24, 40, 0.04);
+  transition: 0.2s;
 }
 .suggestion-btn:hover {
   box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);

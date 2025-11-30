@@ -235,6 +235,9 @@ export const useAuthStore = defineStore('auth', {
 
         // Response may contain token and optional user. Support different shapes.
         const data = resp.data || {}
+        console.log('[AuthStore] login raw response:', data)
+        // Persist full login response for global context usage (overwrites each login)
+        try { localStorage.setItem('loginResponse', JSON.stringify(data)) } catch { /* ignore */ }
         // look for token in common places
         const token = data.token || data.accessToken || data?.data?.token
         this.token = token || null
@@ -247,6 +250,10 @@ export const useAuthStore = defineStore('auth', {
 
         // determine user object: resp.data.user || resp.data.usuario || call Usuario list endpoint to find by email
         let user = data.user || data.usuario || data.data || null
+        // Specific backend shape: { message, usuario: { id, nombre, correo, telefono }, token }
+        if (!user && data.usuario && typeof data.usuario === 'object') {
+          user = data.usuario
+        }
 
         if (!user) {
           // try to fetch user list and find by email/correo
@@ -289,6 +296,11 @@ export const useAuthStore = defineStore('auth', {
         }
 
         this.user = user
+        // Persist canonical usuarioId if present
+        const usuarioId = (this.user?.id || this.user?._id || this.user?.Id)
+        if (usuarioId) {
+          localStorage.setItem('usuarioId', String(usuarioId))
+        }
 
         // Extract role: first try by ID mapping, then by name
         let finalRole = null

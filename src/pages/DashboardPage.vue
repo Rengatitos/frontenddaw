@@ -157,9 +157,9 @@ export default {
     const notificationsStore = useNotificationsStore()
     const nombreUsuario = ref('Colaborador')
     const supervisorInfo = ref({
-      nombre: 'Carlos García Pérez',
-      cargo: 'Reclutador de Recursos Humanos',
-      email: 'carlos.garcia@tcs.com',
+      nombre: 'Jefferson Garay',
+      cargo: 'Supervisor de Área',
+      email: 'jeff@tcs.com',
       telefono: '+51 912 345 678',
     })
     const progressPercentage = ref(0.33)
@@ -280,7 +280,11 @@ export default {
       totalTasks,
       showChatBubble: ref(false),
       openChatbot() {
-        window.open('https://rengatitos.github.io/DAWChatBot/#/chat', '_blank')
+        const base = window.location.origin
+        const isHash = (import.meta.env.VUE_ROUTER_MODE || '').toLowerCase() !== 'history'
+        const path = isHash ? '/#/onboarding-chat?allow=1' : '/onboarding-chat?allow=1'
+        const url = `${base}${path}`
+        window.open(url, '_blank')
       },
     }
   },

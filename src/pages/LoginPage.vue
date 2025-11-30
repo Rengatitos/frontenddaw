@@ -88,7 +88,7 @@
 import { useQuasar } from 'quasar'
 import { ref, toRaw } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore, ADMIN_ROLE_ID } from 'src/stores/auth'
+import { useAuthStore } from 'src/stores/auth'
 
 export default {
   name: 'LoginPage',
@@ -164,6 +164,8 @@ export default {
 
         const res = await auth.login(payload)
         console.log('Respuesta Login:', res)
+        // Guarda SIEMPRE el response body completo para consumo del chatbot
+        try { localStorage.setItem('loginResponse', JSON.stringify(res)) } catch { /* ignore */ }
 
         if (!res || res.ok === false) {
           $q.notify({ type: 'negative', message: 'Credenciales incorrectas' })
@@ -172,6 +174,8 @@ export default {
 
         // 1. Obtener objeto usuario
         let rawUser = res.usuario || (auth.user ? toRaw(auth.user) : null)
+        // Fallback: si el response tiene usuario anidado, úsalo
+        if (!rawUser && res && res.usuario) rawUser = res.usuario
         if (rawUser) {
           rawUser = JSON.parse(JSON.stringify(rawUser)) // Limpieza de Proxy
         }
@@ -198,15 +202,14 @@ export default {
 
         console.log('ID RECONSTRUIDO EXITOSAMENTE:', finalId)
 
-        // 3. Guardar
+        // 3. Guardar — claves que el chatbot usa
         localStorage.setItem('usuarioId', finalId)
-
-        // Guardamos el usuario pero le "parchamos" el ID corregido para que no falle luego
         rawUser.id = finalId
-        localStorage.setItem('userData', JSON.stringify(rawUser))
+        try { localStorage.setItem('user', JSON.stringify(rawUser)) } catch { /* ignore */ }
 
-        if (res.token || auth.token) {
-          localStorage.setItem('token', res.token || auth.token)
+        const finalToken = res.token || auth.token
+        if (finalToken) {
+          localStorage.setItem('token', finalToken)
         }
 
         $q.notify({
@@ -214,11 +217,8 @@ export default {
           message: `Bienvenido ${rawUser.nombre || ''}`,
         })
 
-        if (auth.roleId === ADMIN_ROLE_ID || auth.role === 'Administrador') {
-          router.push('/admin/dashboard')
-        } else {
-          router.push('/next-steps')
-        }
+        // Redirigir SIEMPRE al Dashboard tras iniciar sesión
+        router.push('/dashboard')
       } catch (error) {
         console.error(error)
         $q.notify({ type: 'negative', message: 'Error al autenticar' })
