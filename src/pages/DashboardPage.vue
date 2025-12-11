@@ -14,8 +14,13 @@
       <div class="text-subtitle1 text-grey-7">Estamos emocionados de tenerte en nuestro equipo</div>
     </div>
 
-    <!-- Floating Chatbot Icon -->
-    <div class="floating-chatbot-container" @click="openChatbot" @mouseenter="showChatBubble = true" @mouseleave="showChatBubble = false">
+    <!-- Para los icons del chatbot  -->
+    <div
+      class="floating-chatbot-container"
+      @click="openChatbot"
+      @mouseenter="showChatBubble = true"
+      @mouseleave="showChatBubble = false"
+    >
       <transition appear enter-active-class="animated fadeIn" leave-active-class="animated fadeOut">
         <div v-if="showChatBubble" class="chat-bubble">
           Soy tu asistente onboarding, ¡conversa conmigo si tienes dudas!
@@ -222,7 +227,9 @@ export default {
               } else {
                 // fetch admins list by role id
                 const adminsRes = await api.get(`Usuario/rol/${ROLE_ID_ADMIN_FALLBACK}`)
-                const admins = Array.isArray(adminsRes.data) ? adminsRes.data : adminsRes.data?.data || []
+                const admins = Array.isArray(adminsRes.data)
+                  ? adminsRes.data
+                  : adminsRes.data?.data || []
                 if (admins.length > 0) {
                   const a = admins[0]
                   supervisorInfo.value = {
@@ -249,7 +256,8 @@ export default {
                 id: t.id || t._id || t.id,
                 name: t.titulo || t.nombre || t.name,
                 status: t.estado || t.status || 'Pendiente',
-                completed: typeof t.estado === 'string' && t.estado.toLowerCase().includes('complet'),
+                completed:
+                  typeof t.estado === 'string' && t.estado.toLowerCase().includes('complet'),
               }))
               tasksCompleted.value = tasks.value.filter((t) => t.completed).length
               totalTasks.value = tasks.value.length

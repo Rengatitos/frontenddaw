@@ -3,6 +3,7 @@
 ## 🔄 Flujo Completo
 
 ### 1. **LOGIN (Usuario ingresa credenciales)**
+
 - Frontend: `LoginPage.vue` → `auth.login(email, password)`
 - Backend: `UsuarioController.cs` → `Login()` endpoint
   - Valida credenciales
@@ -12,6 +13,7 @@
   - Retorna: `{ usuario, token }`
 
 ### 2. **Frontend procesa respuesta**
+
 - `src/stores/auth.js` (store de Pinia):
   - Recibe `usuario` objeto con `usuario.rol` (ID)
   - Mapea ID → nombre usando `getRoleNameFromId()`:
@@ -21,16 +23,19 @@
   - Guarda en localStorage: `token` y `role`
 
 ### 3. **Redirección post-login**
+
 - `LoginPage.vue`:
   - Si `auth.role === "Administrador"` → `router.push('/admin/dashboard')`
   - Si `auth.role === "Usuario"` → `router.push('/dashboard')`
 
 ### 4. **Peticiones autenticadas a la API**
+
 - `src/boot/axios.js` (interceptor):
   - **ANTES**: No había interceptor → no se enviaba token
   - **AHORA**: Añade `Authorization: Bearer <token>` a **todas las peticiones**
 
 ### 5. **Backend valida autorización**
+
 ```csharp
 [HttpGet]
 [Authorize(Roles = "Administrador")]  // ← Valida que el token tenga role="Administrador"
@@ -75,6 +80,7 @@ ROLE_ID_USER  = "692284a99875b23f82fb7023"   → "Usuario"
    - En consola ver: `auth.role = "Usuario"`
 
 3. **Verificar token en DevTools**:
+
    ```javascript
    const token = localStorage.getItem('token')
    const payload = JSON.parse(atob(token.split('.')[1]))
@@ -95,4 +101,3 @@ ROLE_ID_USER  = "692284a99875b23f82fb7023"   → "Usuario"
 - `src/stores/auth.js` - Mejorado mapeo por ID
 - `src/pages/LoginPage.vue` - Limpiados logs de debug
 - `src/utils/jwt.js` - Limpiados logs
-
